@@ -1,5 +1,5 @@
 # Jigsaw sudoku
-import sys, functools, operator
+import sys, functools, operator, time
 sys.path.insert(0,'jigsaw_doku')
 from utils import *
 from random import choice
@@ -13,37 +13,43 @@ class JigsawSudoku:
 
     def __init__(self, size=9, auto_generate=True, timeout=10):
         self.size = size
-        self.regions = dict()
         self.left_grid_ext = [(x, y) for x, y in zip([0]*(size + 1), range(0, size + 1))]
         self.right_grid_ext = [(x, y) for x, y in zip([size]*(size + 1), range(0, size + 1))]
         self.top_grid_ext = [(x, y) for x, y in zip(range(0, size + 1), [0]*(size + 1))]
         self.bottom_grid_ext = [(x, y) for x, y in zip(range(0, size + 1), [size]*(size + 1))]
         self.exterior = self.top_grid_ext + self.bottom_grid_ext + self.right_grid_ext + self.left_grid_ext
         self.all_cells = [Cell(box(x, y, x+1, y+1)) for (x,y) in [coord for coord in product(range(0, self.size), repeat=2)] ]
-        self.available_region = unary_union(self.all_cells)
-        self.available_cells = self.all_cells
         self.corners = [
-            Cell(box(0, 0, 1, 1)), # bottom left
-            Cell(box(0, self.size-1, 1, self.size)), # top left
-            Cell(box(self.size-1, self.size-1, self.size, self.size)), # top right
-            Cell(box(self.size - 1, 0, self.size, 1)) # bottom right
-            ]
+                Cell(box(0, 0, 1, 1)), # bottom left
+                Cell(box(0, self.size-1, 1, self.size)), # top left
+                Cell(box(self.size-1, self.size-1, self.size, self.size)), # top right
+                Cell(box(self.size - 1, 0, self.size, 1)) # bottom right
+                ]
         if auto_generate is True:
             generation_status = False
+            self.timeout = timeout
+            global PUZZLE_GEN_START_TIME
             while generation_status is False:
+                # Reset regions/available spaces if needed
+                self.regions = dict()
+                self.available_region = unary_union(self.all_cells)
+                self.available_cells = self.all_cells
+                # start timing
+                PUZZLE_GEN_START_TIME = time.time()
                 try:
-                    try:
-                        generation_status = func_timeout.func_timeout(timeout=timeout, func=self.generate_all_regions(), args=[])
-                    except func_timeout.FunctionTimedOut:
-                        raise TimeoutError
-                except (ValueError, TimeoutError):
+                    self.generate_all_regions()
+                    generation_status = True
+                except (ValueError, TimeoutError, IndexError):
                     continue
+        else:
+            self.regions = dict()
+            self.available_region = unary_union(self.all_cells)
+            self.available_cells = self.all_cells
             
 
     # Automatically generate puzzles   
     def auto_generate_puzzles(self):
         self.generate_all_regions(n=self.size)
-        return True
 
     # cells currently used to define any existing (completed) regions
     def cells_in_regions(self):
@@ -104,6 +110,8 @@ class JigsawSudoku:
         exclude = list()
         complete_status = False
         while complete_status is False:
+            if time.time() - PUZZLE_GEN_START_TIME >= self.timeout:
+                raise TimeoutError
             # new random (available and adjacent) cell
             available = self.get_available(cells, exclude=exclude)
             cell = self.rand_cell(available)
@@ -137,6 +145,8 @@ class JigsawSudoku:
         else:
             start_acquired = False
             while start_acquired is False:
+                if time.time() - PUZZLE_GEN_START_TIME >= self.timeout:
+                    raise TimeoutError
                 available = self.get_available(cells=self.cells_in_regions())
                 cell = self.rand_cell(available)
                 if type(self.available_region.difference(cell)) != Polygon:
@@ -157,6 +167,8 @@ class JigsawSudoku:
         iter = 1
         complete_status = False
         while complete_status is False:
+            if time.time() - PUZZLE_GEN_START_TIME >= self.timeout:
+                raise TimeoutError
             # new random (available and adjacent) cell
             available = self.get_available(cells, exclude=exclude)
             cell = self.rand_cell(available)
