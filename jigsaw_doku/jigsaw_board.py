@@ -13,6 +13,9 @@ class JigsawSudoku:
 
     def __init__(self, size=9, auto_generate=True, timeout=10):
         self.size = size
+        # initiated as empty rows/columns
+        self.rows = dict(zip(list(range(1, self.size + 1)), [None]*len(keys)))
+        self.columns = dict(zip(list(range(1, self.size + 1)), [None]*len(keys)))
         self.left_grid_ext = [(x, y) for x, y in zip([0]*(size + 1), range(0, size + 1))]
         self.right_grid_ext = [(x, y) for x, y in zip([size]*(size + 1), range(0, size + 1))]
         self.top_grid_ext = [(x, y) for x, y in zip(range(0, size + 1), [0]*(size + 1))]
@@ -268,11 +271,15 @@ class Cell(JigsawSudoku):
         if len(shapely_box.exterior.coords) != 5:
             raise TypeError("Cell must be a shapely box (Polygon) of 1x1 dimensions")
         self.cell = shapely_box
+        self.value = None
         self.coords = list(shapely_box.exterior.coords)[:-1]
         self.area = shapely_box.area
         self.origin = self.coords[3]
         self.x_start = self.origin[0]
         self.y_start = self.origin[1]
+        self.row = self.x_start + 1
+        self.column = self.y_start + 1
+        self.index = (self.row, self.column) #(x,y)
         self._geom = shapely_box._geom
         self.boundary = shapely_box.boundary
         self.center_coords = (self.x_start + .5, self.y_start + .5)
