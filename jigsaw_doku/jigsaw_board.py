@@ -1,18 +1,15 @@
 # Jigsaw sudoku
-import matplotlib
-matplotlib.use('Agg')
-import sys, functools, operator, func_timeout
+import sys, functools, operator
 sys.path.insert(0,'jigsaw_doku')
 from utils import *
 from random import choice
 from shapely.geometry import Polygon, box, Point, MultiPolygon
 from shapely.ops import unary_union
-import matplotlib.pyplot as plt
 from itertools import product
 
 class JigsawSudoku:
 
-    def __init__(self, size=9):
+    def __init__(self, size=9, auto_generate=True):
         self.size = size
         self.regions = dict()
         self.left_grid_ext = [(x, y) for x, y in zip([0]*(size + 1), range(0, size + 1))]
@@ -29,6 +26,9 @@ class JigsawSudoku:
             Cell(box(self.size-1, self.size-1, self.size, self.size)), # top right
             Cell(box(self.size - 1, 0, self.size, 1)) # bottom right
             ]
+        if auto_generate is True:
+            self.generate_all_regions(n=self.size)
+       
         
 
     # cells currently used to define any existing (completed) regions
@@ -156,7 +156,6 @@ class JigsawSudoku:
                 for i in range(0, len(sub_regions.geoms)):
                     r = sub_regions.geoms[i]
                     if r.area < self.size - iter:
-                        #logger.info('Sub-region: {}; Area: {}; iteration: {}; cell: {};'.format(i, r.area, iter, cell.__str__()))
                         possible_sub_region = True
                         sub_r_cells = [Cell(c) for c in divide_region(r)]
                         cells += sub_r_cells
@@ -167,8 +166,7 @@ class JigsawSudoku:
                             self.regions.update({start_len + 1 : Region(cells=cells)})
                             complete_status = True
                         break  
-                    elif r.area == self.size :
-                        #logger.info('Sub-region: {}; Area: {}; iteration: {}; cell: {};'.format(i, r.area, iter, cell.__str__()))
+                    elif r.area == self.size:
                         possible_sub_region = True
                         sub_r_cells = [Cell(c) for c in divide_region(r)]
                         cells = sub_r_cells
@@ -210,8 +208,9 @@ class JigsawSudoku:
                 self.available_region = None
                 self.available_cells = None
             # This shouldn't happen
+            # TODO
             elif self.available_region.area != self.size and start_len == self.size - 1:
-                logger.error("The area of the final region != {}".format(self.size))
+                #logger.error("The area of the final region != {}".format(self.size))
                 raise ValueError
             # Not the first or final region being filled - primary case
             else:
@@ -222,10 +221,8 @@ class JigsawSudoku:
         if n is None:
             n = self.size
         self.gen_first_region()
-        logger.info('Region {} completed'.format(len(self.regions)))
         while len(self.regions) < n:
             self.gen_next_region()
-            logger.info('Region {} completed'.format(len(self.regions)))
 
 
 
@@ -257,25 +254,3 @@ class Cell(JigsawSudoku):
 
     def __str__(self):
         return 'box({}, {}, {}, {})'.format(self.x_start, self.y_start, self.x_start + 1, self.y_start + 1)
-
-
-def main(n=9):
-    js = JigsawSudoku(size=n)
-    js.generate_all_regions(n=n)
-    return js
-
-
-if __name__ == '__main__':
-    js = None
-    while js is None:
-        try:
-            try:
-                js = func_timeout.func_timeout(
-                        timeout=15, func=main, args=[9, True]
-                    )
-            except func_timeout.FunctionTimedOut:
-                logger.error('TimeoutError')
-                raise TimeoutError
-        except:
-            logger.info('Retrying...')
-            continue
