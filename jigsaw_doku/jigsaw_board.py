@@ -7,9 +7,11 @@ from shapely.geometry import Polygon, box, Point, MultiPolygon
 from shapely.ops import unary_union
 from itertools import product
 
+
+
 class JigsawSudoku:
 
-    def __init__(self, size=9, auto_generate=True):
+    def __init__(self, size=9, auto_generate=True, timeout=10):
         self.size = size
         self.regions = dict()
         self.left_grid_ext = [(x, y) for x, y in zip([0]*(size + 1), range(0, size + 1))]
@@ -27,9 +29,21 @@ class JigsawSudoku:
             Cell(box(self.size - 1, 0, self.size, 1)) # bottom right
             ]
         if auto_generate is True:
-            self.generate_all_regions(n=self.size)
-       
-        
+            generation_status = False
+            while generation_status is False:
+                try:
+                    try:
+                        generation_status = func_timeout.func_timeout(timeout=timeout, func=self.generate_all_regions(), args=[])
+                    except func_timeout.FunctionTimedOut:
+                        raise TimeoutError
+                except (ValueError, TimeoutError):
+                    continue
+            
+
+    # Automatically generate puzzles   
+    def auto_generate_puzzles(self):
+        self.generate_all_regions(n=self.size)
+        return True
 
     # cells currently used to define any existing (completed) regions
     def cells_in_regions(self):
