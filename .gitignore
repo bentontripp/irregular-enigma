@@ -1,6 +1,7 @@
 # Environment
 jigsaw_env/*
 jigsaw_doku/__pycache__/*
+archive/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
