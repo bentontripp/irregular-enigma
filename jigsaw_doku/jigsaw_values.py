@@ -1,9 +1,7 @@
 from sympy.utilities.iterables import multiset_permutations
 import numpy as np
 
-from jigsaw_board import *
-
-class SudokuValues(JigsawSudoku):
+class SudokuValues:
 
     def __init__(self, size=9):
         # Maybe just try generating the puzzles WITH the values, and use that as an additional constraint? Or try generating values, shuffling, and creating regions when a 
