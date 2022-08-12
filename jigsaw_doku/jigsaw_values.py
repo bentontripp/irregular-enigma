@@ -1,8 +1,7 @@
 from sympy.utilities.iterables import multiset_permutations
 import numpy as np
 
-
-
+from jigsaw_board import *
 
 class SudokuValues(JigsawSudoku):
 
@@ -17,14 +16,14 @@ class SudokuValues(JigsawSudoku):
             if i == 0:
                 m = pr.pop(0).reshape(1, self.size)
             else:
-                m, pr = update_grid(m, pr) 
+                m, pr = self.update_grid(m, pr) 
                 
 
     def reshape_list_to_arr(self, perm):
         return np.reshape(np.array(perm), (1, self.size))
 
     def perms(self):
-        p = [reshape_list_to_arr(perm, self.size) for perm in multiset_permutations(np.arange(1, self.size + 1))]
+        p = [self.reshape_list_to_arr(perm) for perm in multiset_permutations(np.arange(1, self.size + 1))]
         np.random.shuffle(p)
         return p
 
@@ -37,4 +36,6 @@ class SudokuValues(JigsawSudoku):
                 return cm, pr
             else:
                 pr.pop(i)
-            
+
+if __name__ == '__main__':
+    grid = SudokuValues()
