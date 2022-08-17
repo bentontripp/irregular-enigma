@@ -142,7 +142,8 @@ class SudokuValues:
             try:
                 cm = np.concatenate((m, pr[i]), axis=0)
             except IndexError:
-                raise Exception('Index out of range')
+                logger.error('m: {}\n i: {}\n len(pr): {}\n rmv_idcs: {}'.format(m, i, len(pr), rmv_idcs))
+                raise IndexError
             if len([col for col in range(0, self.size) if np.unique(cm[:, col]).size == cm.shape[0]]) == self.size:
                 rmv_idcs.append(i)
                 for idx in rmv_idcs:
