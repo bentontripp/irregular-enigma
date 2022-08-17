@@ -90,17 +90,6 @@ class SudokuValues:
         self.size = size
         # Generate corner regions
         self.corners = None
-        # init exclusions (edge rows/columns)
-        self.exclude = [
-            tuple((i, 0) for i in range(0, self.size)),
-            tuple((0, i) for i in range(0, self.size)),
-            tuple((i, self.size-1) for i in range(0, self.size)),
-            tuple((0, i) for i in range(self.size-1, -1, -1)),
-            tuple((i, 0) for i in range(self.size-1, -1, -1)),
-            tuple((self.size-1, i) for i in range(0, self.size)),
-            tuple((i, self.size-1) for i in range(self.size-1, -1, -1)),
-            tuple((self.size-1, i) for i in range(self.size-1, -1, -1))
-        ]
         if set_to_default is True:
             if self.size != 9:
                 logger.info('Resetting size to default (9)')
@@ -114,6 +103,17 @@ class SudokuValues:
                                   [5, 3, 1, 6, 4, 2, 9, 7, 8], 
                                   [6, 4, 2, 9, 7, 8, 5, 3, 1], 
                                   [9, 7, 8, 5, 3, 1, 6, 4, 2]])
+            # init exclusions (edge rows/columns)
+            self.exclude = [
+                tuple((i, 0) for i in range(0, self.size)),
+                tuple((0, i) for i in range(0, self.size)),
+                tuple((i, self.size-1) for i in range(0, self.size)),
+                tuple((0, i) for i in range(self.size-1, -1, -1)),
+                tuple((i, 0) for i in range(self.size-1, -1, -1)),
+                tuple((self.size-1, i) for i in range(0, self.size)),
+                tuple((i, self.size-1) for i in range(self.size-1, -1, -1)),
+                tuple((self.size-1, i) for i in range(self.size-1, -1, -1))
+            ]
             # Generate corners
             self.corner_loop(attempts_per_grid)
         else:
@@ -129,6 +129,17 @@ class SudokuValues:
                         m, pr = self.update_grid(m, pr) 
                 self.grid = m
                 logger.info('Grid:\n{}'.format(self.grid))
+                            # init exclusions (edge rows/columns)
+                self.exclude = [
+                    tuple((i, 0) for i in range(0, self.size)),
+                    tuple((0, i) for i in range(0, self.size)),
+                    tuple((i, self.size-1) for i in range(0, self.size)),
+                    tuple((0, i) for i in range(self.size-1, -1, -1)),
+                    tuple((i, 0) for i in range(self.size-1, -1, -1)),
+                    tuple((self.size-1, i) for i in range(0, self.size)),
+                    tuple((i, self.size-1) for i in range(self.size-1, -1, -1)),
+                    tuple((self.size-1, i) for i in range(self.size-1, -1, -1))
+                ]
                 corners_complete = self.corner_loop(attempts_per_grid)
 
         
@@ -141,11 +152,13 @@ class SudokuValues:
             attempts += 1
             try:
                 self.corners = self.gen_corner_regions()
-                logger.info('{} Attempts completed in {} seconds'.format(attempts, time.time() - start_attempts))
+                logger.info('{} Attempts completed in {} seconds. {} exclusions.'\
+                    .format(attempts, time.time() - start_attempts, len(self.exclude)))
                 return True
             except:
                 if attempts >= attempts_per_grid:
-                    logger.info('{} Attempts completed in {} seconds'.format(attempts, time.time() - start_attempts))
+                    logger.info('{} Attempts completed in {} seconds. {} exclusions.'\
+                        .format(attempts, time.time() - start_attempts, len(self.exclude)))
                     logger.info('No corner solutions found given the selected arrangement. Starting over...')
                     return False
         
