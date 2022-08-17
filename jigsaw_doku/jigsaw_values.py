@@ -150,7 +150,7 @@ class SudokuValues:
                     pr.pop(idx)
                 return cm, pr
             else:
-                rmv_idcs.append(i)
+                rmv_idcs.append(i - len(rmv_idcs))
     #----------------------------------------------------------------------------------------------------------------------------------------
     # Methods to divide up regions
 
