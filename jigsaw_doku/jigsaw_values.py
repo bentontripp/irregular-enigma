@@ -86,29 +86,8 @@ def flatten(nl):
 
 class SudokuValues:
 
-    def __init__(self, size=9, set_to_default=False):
+    def __init__(self, size=9, set_to_default=False, attempts_per_grid=1e6):
         self.size = size
-        if set_to_default is True:
-            self.grid = np.array([[1, 2, 3, 4, 5, 6, 7, 8, 9], 
-                                  [4, 5, 6, 7, 8, 9, 1, 2, 3], 
-                                  [7, 8, 9, 1, 2, 3, 4, 5, 6], 
-                                  [2, 1, 4, 3, 6, 5, 8, 9, 7], 
-                                  [3, 6, 5, 8, 9, 7, 2, 1, 4], 
-                                  [8, 9, 7, 2, 1, 4, 3, 6, 5], 
-                                  [5, 3, 1, 6, 4, 2, 9, 7, 8], 
-                                  [6, 4, 2, 9, 7, 8, 5, 3, 1], 
-                                  [9, 7, 8, 5, 3, 1, 6, 4, 2]])
-        else:
-            # possible rows
-            pr = self.perms()
-            # start out with board that has unique rows/column values
-            for i in range(0, self.size):
-                if i == 0:
-                    m = pr.pop(0).reshape(1, self.size)
-                else:
-                    m, pr = self.update_grid(m, pr) 
-            self.grid = m
-            logger.info('Grid:\n{}'.format(self.grid))
         # Generate corner regions
         self.corners = None
         # init exclusions (edge rows/columns)
@@ -122,17 +101,55 @@ class SudokuValues:
             tuple((i, self.size-1) for i in range(self.size-1, -1, -1)),
             tuple((self.size-1, i) for i in range(self.size-1, -1, -1))
         ]
+        if set_to_default is True:
+            if self.size != 9:
+                logger.info('Resetting size to default (9)')
+                self.size = 9
+            self.grid = np.array([[1, 2, 3, 4, 5, 6, 7, 8, 9], 
+                                  [4, 5, 6, 7, 8, 9, 1, 2, 3], 
+                                  [7, 8, 9, 1, 2, 3, 4, 5, 6], 
+                                  [2, 1, 4, 3, 6, 5, 8, 9, 7], 
+                                  [3, 6, 5, 8, 9, 7, 2, 1, 4], 
+                                  [8, 9, 7, 2, 1, 4, 3, 6, 5], 
+                                  [5, 3, 1, 6, 4, 2, 9, 7, 8], 
+                                  [6, 4, 2, 9, 7, 8, 5, 3, 1], 
+                                  [9, 7, 8, 5, 3, 1, 6, 4, 2]])
+            # Generate corners
+            self.corner_loop(attempts_per_grid)
+        else:
+            corners_complete = False
+            while corners_complete is False:
+                # possible rows
+                pr = self.perms()
+                # start out with board that has unique rows/column values
+                for i in range(0, self.size):
+                    if i == 0:
+                        m = pr.pop(0).reshape(1, self.size)
+                    else:
+                        m, pr = self.update_grid(m, pr) 
+                self.grid = m
+                logger.info('Grid:\n{}'.format(self.grid))
+                corners_complete = self.corner_loop(attempts_per_grid)
+
+        
+        
+    # Loop to generate corners until success
+    def corner_loop(self, attempts_per_grid):
         attempts = 0
         start_attempts = time.time()
         while True:
             attempts += 1
             try:
                 self.corners = self.gen_corner_regions()
-                break
+                logger.info('{} Attempts completed in {} seconds'.format(attempts, time.time() - start_attempts))
+                return True
             except:
-                if attempts >= 2:
-                    break
-        logger.info('{} Attempts completed in {} seconds'.format(attempts, time.time() - start_attempts))
+                if attempts >= attempts_per_grid:
+                    logger.info('{} Attempts completed in {} seconds'.format(attempts, time.time() - start_attempts))
+                    logger.info('No corner solutions found given the selected arrangement. Starting over...')
+                    return False
+        
+        
                 
     #----------------------------------------------------------------------------------------------------------------------------------------
     # Methods to generate basice board with unique rows/columns in `__init__()`
@@ -181,7 +198,6 @@ class SudokuValues:
 
     # Recursively generate the corner regions
     def gen_corner_regions(self, completed_corners=list(), exclude_corners=list()):
-        print('exclude_corners', exclude_corners)
         n_regions = len(completed_corners)
         if n_regions > 0:
             all_completed = flatten(completed_corners)
