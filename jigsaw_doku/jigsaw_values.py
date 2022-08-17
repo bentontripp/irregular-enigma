@@ -108,17 +108,18 @@ class SudokuValues:
                 else:
                     m, pr = self.update_grid(m, pr) 
             self.grid = m
+            logger.info('Grid:\n{}'.format(self.grid))
         # Generate corner regions
         self.corners = None
         attempts = 1
         while True:
             try:
-                print('Attempt #{}'.format(attempts))
                 self.corners = self.gen_corner_regions()
                 break
             except:
                 attempts += 1
-                if attempts > 10:
+                if attempts > 50:
+                    logger.info('{} Attempts completed'.format(attempts - 1))
                     break
                 
     #----------------------------------------------------------------------------------------------------------------------------------------
@@ -136,13 +137,19 @@ class SudokuValues:
 
     # iteratively check if each permutation can be used as a new row; if not, remove; if yes, concatenate; return with reduced permutations
     def update_grid(self, m, pr):
+        rmv_idcs = list()
         for i in range(0, len(pr)):
-            cm = np.concatenate((m, pr[i]), axis=0)
+            try:
+                cm = np.concatenate((m, pr[i]), axis=0)
+            except IndexError:
+                raise Exception('Index out of range')
             if len([col for col in range(0, self.size) if np.unique(cm[:, col]).size == cm.shape[0]]) == self.size:
-                pr.pop(i)
+                rmv_idcs.append(i)
+                for idx in rmv_idcs:
+                    pr.pop(idx)
                 return cm, pr
             else:
-                pr.pop(i)
+                rmv_idcs.append(i)
     #----------------------------------------------------------------------------------------------------------------------------------------
     # Methods to divide up regions
 
@@ -269,5 +276,5 @@ class SudokuValues:
             return self.gen_corner_regions(completed_corners, exclude_corners) 
 
 if __name__ == '__main__':
-    s = SudokuValues(size=9, set_to_default=True)
+    s = SudokuValues(size=9, set_to_default=False)
     print(s.corners)
