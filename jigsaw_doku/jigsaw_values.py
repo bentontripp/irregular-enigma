@@ -111,16 +111,28 @@ class SudokuValues:
             logger.info('Grid:\n{}'.format(self.grid))
         # Generate corner regions
         self.corners = None
-        attempts = 1
+        # init exclusions (edge rows/columns)
+        self.exclude = [
+            tuple((i, 0) for i in range(0, self.size)),
+            tuple((0, i) for i in range(0, self.size)),
+            tuple((i, self.size-1) for i in range(0, self.size)),
+            tuple((0, i) for i in range(self.size-1, -1, -1)),
+            tuple((i, 0) for i in range(self.size-1, -1, -1)),
+            tuple((self.size-1, i) for i in range(0, self.size)),
+            tuple((i, self.size-1) for i in range(self.size-1, -1, -1)),
+            tuple((self.size-1, i) for i in range(self.size-1, -1, -1))
+        ]
+        attempts = 0
+        start_attempts = time.time()
         while True:
+            attempts += 1
             try:
                 self.corners = self.gen_corner_regions()
                 break
             except:
-                attempts += 1
-                if attempts > 50:
-                    logger.info('{} Attempts completed'.format(attempts - 1))
+                if attempts >= 2:
                     break
+        logger.info('{} Attempts completed in {} seconds'.format(attempts, time.time() - start_attempts))
                 
     #----------------------------------------------------------------------------------------------------------------------------------------
     # Methods to generate basice board with unique rows/columns in `__init__()`
@@ -137,7 +149,6 @@ class SudokuValues:
 
     # iteratively check if each permutation can be used as a new row; if not, remove; if yes, concatenate; return with reduced permutations
     def update_grid(self, m, pr):
-        rmv_idcs = list()
         for i in range(0, len(pr)):
             try:
                 cm = np.concatenate((m, pr[i]), axis=0)
@@ -145,12 +156,9 @@ class SudokuValues:
                 logger.error('m: {}\n i: {}\n len(pr): {}\n rmv_idcs: {}'.format(m, i, len(pr), rmv_idcs))
                 raise IndexError
             if len([col for col in range(0, self.size) if np.unique(cm[:, col]).size == cm.shape[0]]) == self.size:
-                rmv_idcs.append(i)
-                for idx in rmv_idcs:
-                    pr.pop(idx)
-                return cm, pr
+                return cm, pr[i + 1:]
             else:
-                rmv_idcs.append(i - len(rmv_idcs))
+                continue
     #----------------------------------------------------------------------------------------------------------------------------------------
     # Methods to divide up regions
 
@@ -173,10 +181,11 @@ class SudokuValues:
 
     # Recursively generate the corner regions
     def gen_corner_regions(self, completed_corners=list(), exclude_corners=list()):
+        print('exclude_corners', exclude_corners)
         n_regions = len(completed_corners)
         if n_regions > 0:
             all_completed = flatten(completed_corners)
-            exclude_corners += all_completed
+            exclude_corners = list(set(exclude_corners + all_completed))
         else:
             all_completed = list()
         # start w/ random corner
@@ -191,34 +200,32 @@ class SudokuValues:
             adj = get_adjacent(gen_ul_indices(self.size))
             for k in adj.keys():
                 adj[k] = [v for v in adj[k] if v not in all_completed]
-            column = tuple((i, 0) for i in range(0, self.size))
-            row = tuple((0, i) for i in range(0, self.size))
+            # column = tuple((i, 0) for i in range(0, self.size))
+            # row = tuple((0, i) for i in range(0, self.size))
         elif corner == (0, self.size-1):
             start_1 = (1, self.size-1)
             start_2 = (0, self.size-2)
             adj = get_adjacent(gen_ur_indices(self.size))
             for k in adj.keys():
                 adj[k] = [v for v in adj[k] if v not in all_completed]
-            column = tuple((i, self.size-1) for i in range(0, self.size))
-            row = tuple((0, i) for i in range(self.size-1, -1, -1))
+            # column = tuple((i, self.size-1) for i in range(0, self.size))
+            # row = tuple((0, i) for i in range(self.size-1, -1, -1))
         elif corner == (self.size-1, 0):
             start_1 = (self.size-2, 0)
             start_2 = (self.size-1, 1)
             adj = get_adjacent(gen_ll_indices(self.size))
             for k in adj.keys():
                 adj[k] = [v for v in adj[k] if v not in all_completed]
-            column = tuple((i, 0) for i in range(self.size-1, -1, -1))
-            row = tuple((self.size-1, i) for i in range(0, self.size))
+            # column = tuple((i, 0) for i in range(self.size-1, -1, -1))
+            # row = tuple((self.size-1, i) for i in range(0, self.size))
         else:
             start_1 = (self.size-2, self.size-1)
             start_2 = (self.size-1, self.size-2)
             adj = get_adjacent(gen_lr_indices(self.size))
             for k in adj.keys():
                 adj[k] = [v for v in adj[k] if v not in all_completed]
-            column = tuple((i, self.size-1) for i in range(self.size-1, -1, -1))
-            row = tuple((self.size-1, i) for i in range(self.size-1, -1, -1))
-        # start out excluding row & column (and any existing regions)
-        exclude = [row, column]
+            # column = tuple((i, self.size-1) for i in range(self.size-1, -1, -1))
+            # row = tuple((self.size-1, i) for i in range(self.size-1, -1, -1))
         # random starting checks
         start_choices = [sc for sc in [start_1, start_2] if sc not in all_completed]
         if len(start_choices) > 1:
@@ -239,18 +246,18 @@ class SudokuValues:
         while next < self.size:
             # get adjacent
             next_ind = [i for i in adj[region_i[next - 1]] if i not in region_i \
-                and self.grid[i] not in region_v and tuple(region_i + [i]) not in exclude]
+                and self.grid[i] not in region_v and tuple(region_i + [i]) not in self.exclude]
             if len(next_ind) == 0:
                 if len(region_i) > 2:
                     if time.time() - PUZZLE_GEN_START_TIME >= TIMEOUT:
                         raise TimeoutError
-                    exclude.append(tuple(region_i))
+                    self.exclude.append(tuple(region_i))
                     region_i.pop(-1)
                     region_v.pop(-1)
                 elif len(region_i) == 2 and len(start_choices) == 1:
                     if time.time() - PUZZLE_GEN_START_TIME >= TIMEOUT:
                         raise TimeoutError
-                    exclude.append(tuple(region_i))
+                    self.exclude.append(tuple(region_i))
                     start = start_choices.pop(0)
                     region_i = [corner, start]
                     region_v = [self.grid[corner], self.grid[start]]
@@ -264,7 +271,7 @@ class SudokuValues:
             # make sure none are blocked
             if len(region_i) == self.size:
                 if self.test_for_blocked(region_i):
-                    exclude.append(tuple(region_i))
+                    self.exclude.append(tuple(region_i))
                     region_i.pop(-1)
                     region_v.pop(-1)
             next = len(region_i)
